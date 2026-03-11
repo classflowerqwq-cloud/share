@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态抛物线族 - Desmos重建</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        
+        .canvas-container {
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.5);
+        }
+        
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: currentColor;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 0 10px currentColor;
+        }
+        
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+        
+        .math-display {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
+        
+        .glow-text {
+            text-shadow: 0 0 20px currentColor;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- 标题 -->
+        <div class="text-center space-y-2">
+            <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+                动态抛物线族可视化
+            </h1>
+            <p class="text-slate-400 text-sm">Desmos State Reconstruction</p >
+        </div>
+
+        <!-- 主画布 -->
+        <div class="canvas-container rounded-2xl border border-slate-700 overflow-hidden relative">
+            <canvas id="graphCanvas" class="w-full h-[500px] block"></canvas>
+            
+            <!-- 坐标标签 -->
+            <div class="absolute top-4 right-4 text-xs text-slate-500 space-y-1 text-right pointer-events-none">
+                <div>X: [-10, 10]</div>
+                <div>Y: [-7.16, 7.16]</div>
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="grid md:grid-cols-2 gap-6 bg-slate-800/50 p-6 rounded-xl border border-slate-700 backdrop-blur-sm">
+            
+            <!-- 参数 a 控制 -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <label class="text-purple-400 font-bold flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-purple-500 shadow-[0_0_10px_#a855f7]"></span>
+                        参数 a (抛物线开口)
+                    </label>
+                    <span id="aValue" class="text-purple-300 font-mono bg-purple-900/30 px-2 py-1 rounded">1.56</span>
+                </div>
+                <input type="range" id="aSlider" min="0" max="3" step="0.01" value="1.56" 
+                       class="w-full text-purple-500">
+                <div class="math-display text-purple-300/80 text-sm text-center">
+                    y = <span id="aMath">1.56</span>x² - 3·<span id="aMath2">1.56</span>x + 1
+                </div>
+            </div>
+
+            <!-- 参数 t 控制 -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <label class="text-blue-400 font-bold flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_#3b82f6]"></span>
+                        参数 t (垂直线位置)
+                    </label>
+                    <span id="tValue" class="text-blue-300 font-mono bg-blue-900/30 px-2 py-1 rounded">4.40</span>
+                </div>
+                <input type="range" id="tSlider" min="-10" max="10" step="0.1" value="4.4" 
+                       class="w-full text-blue-500">
+                <div class="math-display text-blue-300/80 text-sm text-center">
+                    x = <span id="tMath">4.4</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图例与说明 -->
+        <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div class="bg-slate-800/30 p-4 rounded-lg border border-slate-700 space-y-2">
+                <h3 class="font-bold text-slate-300 mb-2">图形元素</h3>
+                <div class="flex items-center gap-2 text-green-400">
+                    <span class="w-8 h-0.5 bg-green-500"></span>
+                    <span class="math-display">y = ax + 1</span> (斜线)
+                </div>
+                <div class="flex items-center gap-2 text-blue-400">
+                    <span class="w-8 h-0.5 bg-blue-500"></span>
+                    <span class="math-display">y = ax² - 3ax + 1</span> (上开口)
+                </div>
+                <div class="flex items-center gap-2 text-green-400">
+                    <span class="w-8 h-0.5 bg-green-500"></span>
+                    <span class="math-display">y = -ax² + 3ax + 1</span> (下开口)
+                </div>
+                <div class="flex items-center gap-2 text-red-400">
+                    <span class="w-8 h-0.5 bg-red-500"></span>
+                    <span class="math-display">y = -0.2</span> (水平线)
+                </div>
+            </div>
+
+            <div class="bg-slate-800/30 p-4 rounded-lg border border-slate-700 space-y-2">
+                <h3 class="font-bold text-slate-300 mb-2">数学特性</h3>
+                <ul class="space-y-1 text-slate-400 text-xs">
+                    <li>• 所有曲线均经过点 <span class="text-slate-200">(0, 1)</span></li>
+                    <li>• 抛物线顶点固定在 <span class="text-slate-200">x = 1.5</span></li>
+                    <li>• 当 x = 3 时，y 值回归 1</li>
+                    <li>• 参数 a 控制开口宽度，a 越大开口越窄</li>
+                    <li>• 两抛物线关于 y = 1 对称</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 状态
+        let a = 1.56;
+        let t = 4.4;
+        
+        // 视口设置
+        const viewport = {
+            xmin: -10, xmax: 10,
+            ymin: -7.160156121966431, ymax: 7.160156121966431
+        };
+        
+        // 颜色配置 (匹配 Desmos)
+        const colors = {
+            green: '#388c46',
+            blue: '#2d70b3',
+            red: '#c74440',
+            purple: '#6042a6',
+            grid: '#334155',
+            axis: '#94a3b8'
+        };
+        
+        function resize() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            draw();
+        }
+        
+        function toScreen(x, y) {
+            const width = canvas.width / window.devicePixelRatio;
+            const height = canvas.height / window.devicePixelRatio;
+            const sx = (x - viewport.xmin) / (viewport.xmax - viewport.xmin) * width;
+            const sy = height - (y - viewport.ymin) / (viewport.ymax - viewport.ymin) * height;
+            return [sx, sy];
+        }
+        
+        function drawGrid() {
+            const width = canvas.width / window.devicePixelRatio;
+            const height = canvas.height / window.devicePixelRatio;
+            
+            ctx.strokeStyle = colors.grid;
+            ctx.lineWidth = 1;
+            
+            // 垂直网格线
+            for (let x = Math.ceil(viewport.xmin); x <= Math.floor(viewport.xmax); x++) {
+                const [sx, _] = toScreen(x, 0);
+                ctx.beginPath();
+                ctx.moveTo(sx, 0);
+                ctx.lineTo(sx, height);
+                ctx.stroke();
+            }
+            
+            // 水平网格线
+            for (let y = Math.ceil(viewport.ymin); y <= Math.floor(viewport.ymax); y++) {
+                const [_, sy] = toScreen(0, y);
+                ctx.beginPath();
+                ctx.moveTo(0, sy);
+                ctx.lineTo(width, sy);
+                ctx.stroke();
+            }
+            
+            // 坐标轴
+            ctx.strokeStyle = colors.axis;
+            ctx.lineWidth = 2;
+            
+            // X轴
+            const [_, y0] = toScreen(0, 0);
+            ctx.beginPath();
+            ctx.moveTo(0, y0);
+            ctx.lineTo(width, y0);
+            ctx.stroke();
+            
+            // Y轴
+            const [x0, __] = toScreen(0, 0);
+            ctx.beginPath();
+            ctx.moveTo(x0, 0);
+            ctx.lineTo(x0, height);
+            ctx.stroke();
+        }
+        
+        function drawLine(equation, color, width = 2) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            
+            const steps = 1000;
+            let first = true;
+            
+            for (let i = 0; i <= steps; i++) {
+                const x = viewport.xmin + (viewport.xmax - viewport.xmin) * (i / steps);
+                const y = equation(x);
+                
+                if (!isFinite(y) || y < viewport.ymin - 10 || y > viewport.ymax + 10) {
+                    first = true;
+                    continue;
+                }
+                
+                const [sx, sy] = toScreen(x, y);
+                
+                if (first) {
+                    ctx.moveTo(sx, sy);
+                    first = false;
+                } else {
+                    ctx.lineTo(sx, sy);
+                }
+            }
+            
+            ctx.stroke();
+        }
+        
+        function drawVerticalLine(x, color) {
+            const [sx, _] = toScreen(x, 0);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(sx, 0);
+            ctx.lineTo(sx, canvas.height / window.devicePixelRatio);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        function drawHorizontalLine(y, color) {
+            const [_, sy] = toScreen(0, y);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, sy);
+            ctx.lineTo(canvas.width / window.devicePixelRatio, sy);
+            ctx.stroke();
+        }
+        
+        function draw() {
+            const width = canvas.width / window.devicePixelRatio;
+            const height = canvas.height / window.devicePixelRatio;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            drawGrid();
+            
+            // y = ax + 1 (绿色)
+            drawLine(x => a * x + 1, colors.green);
+            
+            // y = ax² - 3ax + 1 (蓝色，开口向上)
+            drawLine(x => a * x * x - 3 * a * x + 1, colors.blue);
+            
+            // y = -ax² + 3ax + 1 (绿色，开口向下)
+            drawLine(x => -a * x * x + 3 * a * x + 1, colors.green);
+            
+            // y = -0.2 (红色，水平线)
+            drawHorizontalLine(-0.2, colors.red);
+            
+            // x = t (蓝色，垂直线)
+            drawVerticalLine(t, colors.blue);
+            
+            // 绘制交点标记
+            drawIntersectionPoints();
+        }
+        
+        function drawIntersectionPoints() {
+            // 在 x = t 处标记与各曲线的交点
+            const points = [
+                { y: a * t + 1, color: colors.green, label: '直线' },
+                { y: a * t * t - 3 * a * t + 1, color: colors.blue, label: '上抛物线' },
+                { y: -a * t * t + 3 * a * t + 1, color: colors.green, label: '下抛物线' }
+            ];
+            
+            points.forEach(p => {
+                if (p.y >= viewport.ymin && p.y <= viewport.ymax) {
+                    const [sx, sy] = toScreen(t, p.y);
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 发光效果
+                    ctx.shadowColor = p.color;
+                    ctx.shadowBlur = 10;
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+            });
+        }
+        
+        // 事件监听
+        document.getElementById('aSlider').addEventListener('input', (e) => {
+            a = parseFloat(e.target.value);
+            document.getElementById('aValue').textContent = a.toFixed(2);
+            document.getElementById('aMath').textContent = a.toFixed(2);
+            document.getElementById('aMath2').textContent = a.toFixed(2);
+            draw();
+        });
+        
+        document.getElementById('tSlider').addEventListener('input', (e) => {
+            t = parseFloat(e.target.value);
+            document.getElementById('tValue').textContent = t.toFixed(2);
+            document.getElementById('tMath').textContent = t.toFixed(2);
+            draw();
+        });
+        
+        window.addEventListener('resize', resize);
+        
+        // 初始化
+        resize();
+        
+        // 动画演示（可选）
+        let animating = false;
+        function animate() {
+            if (!animating) return;
+            t += 0.05;
+            if (t > 10) t = -10;
+            document.getElementById('tSlider').value = t;
+            document.getElementById('tValue').textContent = t.toFixed(2);
+            document.getElementById('tMath').textContent = t.toFixed(2);
+            draw();
+            requestAnimationFrame(animate);
+        }
+        
+        // 双击启动/停止动画
+        canvas.addEventListener('dblclick', () => {
+            animating = !animating;
+            if (animating) animate();
+        });
+    </script>
+</body>
+</html>
